@@ -1,0 +1,147 @@
+
+<!DOCTYPE html>
+<head>
+<title>3D Chess Pieces</title>
+<script src="three.min.js"></script>
+<script src="GLTFLoader.js"></script>
+
+<!--Adapted from the blog post:
+    http://solutiondesign.com/blog/-/blogs/webgl-and-three-js-texture-mappi-1/-->
+
+<!-- Kiara Correa Acosta 
+     November 23, 2020
+  Wooden Texture: https://3dtextures.me/2019/09/19/wood-020/
+-->
+
+<script>
+    var scene, camera, renderer; // Three.js rendering basics.
+
+    var canvas; // The canvas on which the image is rendered.
+
+    // This will hold the loaded object
+    var gltfObj;
+
+    // from https://threejsfundamentals.org/threejs/lessons/threejs-load-obj.html
+    function frameArea(sizeToFitOnScreen, boxSize, boxCenter, camera) {
+      const halfSizeToFitOnScreen = sizeToFitOnScreen * 0.5;
+      const halfFovY = THREE.MathUtils.degToRad(camera.fov * .5);
+      const distance = halfSizeToFitOnScreen / Math.tan(halfFovY);
+    
+      // compute a unit vector that points in the direction the camera is now
+      // from the center of the box
+      const direction = (new THREE.Vector3()).subVectors(camera.position, boxCenter).normalize();
+    
+      // move the camera to a position distance units way from the center
+      // in whatever direction the camera was from the center already
+      camera.position.copy(direction.multiplyScalar(distance).add(boxCenter));
+    
+      // pick some near and far values for the frustum that
+      // will contain the box.
+      camera.near = boxSize / 100;
+      camera.far = boxSize * 100;
+    
+      camera.updateProjectionMatrix();
+    
+      // point the camera to look at the center of the box
+      camera.lookAt(boxCenter.x, boxCenter.y, boxCenter.z);
+    }
+
+    // Create the scene. This function is called once, as soon as the page loads.
+    // The renderer has already been created before this function is called.
+    function createWorld() {
+        
+        renderer.setClearColor(0); // Set background color (0, or 0x000000, is black).
+        scene = new THREE.Scene(); // Create a new scene which we can add objects to.
+    
+        // create a camera, sitting on the positive z-axis.  The camera is not part of the scene.
+        camera = new THREE.PerspectiveCamera(60, canvas.width/canvas.height, 1, 5000);
+        camera.position.set(1,30,1);
+        
+        var ambientLight = new THREE.AmbientLight(0xffffff);
+        ambientLight.position.set(0, -1, -1 );
+        scene.add(ambientLight);
+
+         var light = new THREE.DirectionalLight( 0xffffff );
+        light.position.set( 0, 0.75, 0.5 );
+        scene.add(light);
+
+        var light2 = new THREE.DirectionalLight( 0xFFF6F4 );
+        light2.position.set( 0.2, -0.5, 0.1 );
+        scene.add(light2);
+
+
+        // Instantiate a loader
+        var loader = new THREE.GLTFLoader();
+
+        // Load a glTF resource
+        loader.load(
+            // here is the resource URL.  CHANGE THIS TO YOUR FILE NAME
+            'chess.glb',
+            // this model is from https://sketchfab.com/3d-models/cartoon-lowpoly-small-city-free-pack-edd1c604e1e045a0a2a552ddd9a293e6
+
+            // function below is called when the resource is loaded
+            function ( gltf ) {
+                gltfObj = gltf.scene;  // search through the loaded file for the object we want
+                scene.add( gltfObj );
+
+                // set camera parameters to look at object we just loaded
+                // (this will override anything you set before)
+                // from https://threejsfundamentals.org/threejs/lessons/threejs-load-obj.html
+                const box = new THREE.Box3().setFromObject(gltfObj);
+                const boxSize = box.getSize(new THREE.Vector3()).length();
+                const boxCenter = box.getCenter(new THREE.Vector3());
+                console.log(boxSize);
+                console.log(boxCenter);
+                frameArea(boxSize * 1.1, boxSize, boxCenter, camera);  // set the camera to frame the box
+
+                requestAnimationFrame( render );  // we don't want to start rendering until the model is loaded
+            },
+            
+            // called while loading is progressing
+            function ( xhr ) {
+                console.log( ( xhr.loaded / xhr.total * 100 ) + '% loaded' );
+            },
+
+            // called when loading has errors
+            function ( error ) {
+                console.log( 'An error happened' );
+            }
+        );
+    }
+
+    // Render the scene. This is called for each frame of the animation.
+    function render() {
+        requestAnimationFrame( render );
+
+        // make the object rotate
+        gltfObj.rotation.x -= 0.01;
+
+        renderer.render(scene, camera);
+    }
+
+    //----------------------------------------------------------------------------------
+
+    // The init() function is called by the onload event when the document has loaded.
+    function init() {
+        try {
+            canvas = document.getElementById("glcanvas");
+            renderer = new THREE.WebGLRenderer( { canvas: canvas, antialias: true} );
+        }
+        catch (e) {
+            document.getElementById("canvas-holder").innerHTML = "<h3><b>WebGL is not available.</b><h3>";
+            return;
+        }
+    
+        // create world and render scene
+        createWorld();
+    }
+
+</script>
+
+</head>
+<body onload="init()">
+<div id="canvas-holder">
+    <canvas id="glcanvas" width="600" height="400"></canvas>
+</div>
+</body>
+</html>
